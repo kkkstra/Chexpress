@@ -23,6 +23,7 @@ const els = {
   provinceSelect: document.querySelector("#provinceSelect"),
   citySelect: document.querySelector("#citySelect"),
   unitToggle: document.querySelector("#unitToggle"),
+  unitTip: document.querySelector("#unitTip"),
   weightInput: document.querySelector("#weightInput"),
   chart: document.querySelector("#priceChart"),
   legend: document.querySelector("#legend"),
@@ -38,6 +39,8 @@ const els = {
 };
 
 const DISCLAIMER_KEY = "chexpress-disclaimer-confirmed-v1";
+const UNIT_TIP_DURATION_MS = 10000;
+let unitTipTimer = null;
 
 const state = {
   weightJin: 40,
@@ -72,6 +75,7 @@ function init() {
     state.unit = state.unit === "kg" ? "jin" : "kg";
     configureWeightInput();
     render();
+    hideUnitTip();
   });
   els.weightInput.addEventListener("change", () => {
     const next = readWeightInput();
@@ -102,7 +106,7 @@ function init() {
   renderSourceTabs();
   configureWeightInput();
   render();
-  showDisclaimerIfNeeded();
+  if (!showDisclaimerIfNeeded()) queueUnitTip();
 }
 
 function renderProvinceOptions() {
@@ -314,16 +318,41 @@ function closeSourceDialog() {
 }
 
 function showDisclaimerIfNeeded() {
-  if (isDisclaimerConfirmed()) return;
+  if (isDisclaimerConfirmed()) return false;
   els.disclaimerDialog.hidden = false;
   els.disclaimerConfirm.addEventListener(
     "click",
     () => {
       confirmDisclaimer();
       els.disclaimerDialog.hidden = true;
+      queueUnitTip();
     },
     { once: true },
   );
+  return true;
+}
+
+function queueUnitTip() {
+  window.setTimeout(showUnitTip, 650);
+}
+
+function showUnitTip() {
+  if (!els.unitTip) return;
+  window.clearTimeout(unitTipTimer);
+  els.unitTip.hidden = false;
+  window.requestAnimationFrame(() => {
+    els.unitTip.classList.add("is-visible");
+  });
+  unitTipTimer = window.setTimeout(hideUnitTip, UNIT_TIP_DURATION_MS);
+}
+
+function hideUnitTip() {
+  if (!els.unitTip || els.unitTip.hidden) return;
+  window.clearTimeout(unitTipTimer);
+  els.unitTip.classList.remove("is-visible");
+  window.setTimeout(() => {
+    if (!els.unitTip.classList.contains("is-visible")) els.unitTip.hidden = true;
+  }, 200);
 }
 
 function isDisclaimerConfirmed() {
