@@ -77,11 +77,11 @@ h1 {
 
 .controls {
   display: grid;
-  grid-template-columns: minmax(0, 500px) minmax(0, 260px);
+  grid-template-columns: minmax(440px, 520px) minmax(220px, 260px);
   gap: 12px;
   align-items: center;
-  justify-content: start;
-  width: min(100%, 820px);
+  justify-content: space-between;
+  width: 100%;
   padding: 12px;
   border: 1px solid var(--line);
   border-left: 5px solid var(--teal);
@@ -101,6 +101,10 @@ h1 {
   color: var(--muted);
   font-size: 13px;
   font-weight: 700;
+}
+
+.weight-field {
+  justify-self: end;
 }
 
 .control-row {
@@ -528,6 +532,10 @@ button {
   .controls {
     grid-template-columns: 1fr;
     width: 100%;
+  }
+
+  .weight-field {
+    justify-self: stretch;
   }
 
   #priceChart {
