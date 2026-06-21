@@ -207,6 +207,30 @@ window.PRICE_DATA = {
         row("jd-yunnan-other", "云南", "其它", "other", 30, 44.4, 120, 1.2, 0.84),
       ],
     },
+    {
+      id: "post",
+      name: "邮政",
+      shortName: "EMS",
+      color: "#16a34a",
+      formula: "post-student-package",
+      ruleLabel: "5kg / 10kg / 15kg / 15kg以上",
+      source: "IMG_9450.PNG",
+      rows: [
+        postTier("post-hubei", ["湖北"], 15, 23, 28, 2),
+        postTier("post-jiangxi-hunan-anhui-henan", ["江西", "湖南", "安徽", "河南"], 15, 25, 30, 3),
+        postTier(
+          "post-east-south-main",
+          ["上海", "江苏", "浙江", "重庆", "四川", "广东", "北京", "天津", "河北", "山西", "福建", "山东", "陕西", "贵州", "广西"],
+          22,
+          28,
+          36,
+          3,
+        ),
+        postTier("post-northwest-northeast", ["内蒙古", "黑龙江", "吉林", "辽宁", "海南", "云南", "甘肃", "宁夏", "青海"], 28, 38, 48, 4),
+        postPerKg("post-xinjiang", ["新疆"], 22, 22),
+        postPerKg("post-xizang", ["西藏"], 20, 18),
+      ],
+    },
   ],
 };
 
@@ -247,6 +271,39 @@ function sfUnder20(id, province, label, scope, firstPrice, rateTo3, rate3To15, r
     rateAfter20,
     aliases,
     excludes,
+  };
+}
+
+function postTier(id, provinces, price5, price10, price15, rateAfter15) {
+  return {
+    id,
+    kind: "tier",
+    province: provinces[0],
+    provinces,
+    label: provinces.join("、"),
+    scope: "all",
+    price5,
+    price10,
+    price15,
+    rateAfter15,
+    aliases: provinces,
+    excludes: [],
+  };
+}
+
+function postPerKg(id, provinces, firstPrice, rateAfterFirst) {
+  return {
+    id,
+    kind: "per-kg",
+    province: provinces[0],
+    provinces,
+    label: provinces.join("、"),
+    scope: "all",
+    firstKg: 1,
+    firstPrice,
+    rateAfterFirst,
+    aliases: provinces,
+    excludes: [],
   };
 }
 

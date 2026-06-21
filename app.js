@@ -1,5 +1,5 @@
 const data = window.PRICE_DATA;
-const carrierOrder = ["sf", "jd", "deppon"];
+const carrierOrder = ["sf", "jd", "deppon", "post"];
 const carriers = carrierOrder
   .map((id) => data.carriers.find((carrier) => carrier.id === id))
   .filter(Boolean);
@@ -187,6 +187,10 @@ function calculateMatchPrice(match, jin) {
 }
 
 function calculatePrice(carrier, row, jin) {
+  if (carrier.formula === "post-student-package") {
+    return calculatePostPrice(row, jin);
+  }
+
   if (carrier.formula === "deppon-20-60") {
     if (jin <= row.firstJin) return row.firstPrice;
     if (jin < row.pivotJin) return row.firstPrice + (jin - row.firstJin) * row.rateToPivot;
@@ -196,6 +200,19 @@ function calculatePrice(carrier, row, jin) {
   if (jin <= row.firstJin) return row.firstPrice;
   if (jin <= row.thresholdJin) return row.firstPrice + (jin - row.firstJin) * row.rate1;
   return row.firstPrice + (row.thresholdJin - row.firstJin) * row.rate1 + (jin - row.thresholdJin) * row.rate2;
+}
+
+function calculatePostPrice(row, jin) {
+  const kg = jin / 2;
+  if (row.kind === "per-kg") {
+    if (kg <= row.firstKg) return row.firstPrice;
+    return row.firstPrice + (kg - row.firstKg) * row.rateAfterFirst;
+  }
+
+  if (kg <= 5) return row.price5;
+  if (kg <= 10) return row.price10;
+  if (kg <= 15) return row.price15;
+  return row.price15 + (kg - 15) * row.rateAfter15;
 }
 
 function calculateSfUnder20Price(row, jin) {
@@ -434,6 +451,36 @@ function renderSourceTable() {
                 <td>${row.rateToPivot}</td>
                 <td>${row.pivotPrice}</td>
                 <td>${row.rateAfterPivot}</td>
+              </tr>
+            `;
+          })
+          .join("")}
+      </tbody>
+    `;
+    return;
+  }
+
+  if (carrier.formula === "post-student-package") {
+    els.sourceTable.innerHTML = `
+      <thead><tr><th>寄达地</th><th>5kg</th><th>5.1-10kg</th><th>10.1-15kg</th><th>续重1kg</th></tr></thead>
+      <tbody>
+        ${rows
+          .map((row) => {
+            if (row.kind === "per-kg") {
+              return `
+                <tr>
+                  <td class="province-cell">${escapeHtml(row.label)}</td>
+                  <td colspan="4">首重1kg ${row.firstPrice}元，续重每kg ${row.rateAfterFirst}元</td>
+                </tr>
+              `;
+            }
+            return `
+              <tr>
+                <td class="province-cell">${escapeHtml(row.label)}</td>
+                <td>${row.price5}</td>
+                <td>${row.price10}</td>
+                <td>${row.price15}</td>
+                <td>${row.rateAfter15}</td>
               </tr>
             `;
           })
@@ -693,7 +740,7 @@ function buildRowSpanMap(rows, carrier) {
 }
 
 function sourceProvinceLabel(row, carrier) {
-  if (carrier.formula === "deppon-20-60") return row.label;
+  if (carrier.formula === "deppon-20-60" || carrier.formula === "post-student-package") return row.label;
   return row.province;
 }
 
