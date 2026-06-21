@@ -60,17 +60,21 @@ function init() {
     render();
   });
   els.weightInput.addEventListener("change", () => {
-    state.weightJin = valueToJin(Number(els.weightInput.value));
+    const next = readWeightInput({ final: true });
+    if (next.status !== "valid") {
+      restoreWeightInput();
+      return;
+    }
+    state.weightJin = valueToJin(next.value);
     state.locked = true;
     render();
   });
   els.weightInput.addEventListener("input", () => {
-    const next = Number(els.weightInput.value);
-    if (Number.isFinite(next)) {
-      state.weightJin = valueToJin(next);
-      state.locked = true;
-      render();
-    }
+    const next = readWeightInput();
+    if (next.status !== "valid") return;
+    state.weightJin = valueToJin(next.value);
+    state.locked = true;
+    render({ preserveWeightInput: true });
   });
   els.sourceBtn.addEventListener("click", openSourceDialog);
   els.sourceClose.addEventListener("click", closeSourceDialog);
@@ -121,9 +125,9 @@ function renderLegend() {
     .join("");
 }
 
-function render() {
+function render(options = {}) {
   state.weightJin = clampJin(state.weightJin);
-  els.weightInput.value = formatWeightInput(jinToValue(state.weightJin));
+  if (!options.preserveWeightInput) restoreWeightInput();
   els.unitToggle.textContent = unitDisplayLabel();
   els.unitToggle.setAttribute("aria-label", `切换到${state.unit === "kg" ? "斤" : "千克"}`);
   els.weightInput.setAttribute("aria-label", `重量（${unitDisplayLabel()}）`);
@@ -456,6 +460,27 @@ function configureWeightInput() {
   els.weightInput.min = String(minValue());
   els.weightInput.max = String(maxValue());
   els.weightInput.step = state.unit === "kg" ? "0.5" : "1";
+}
+
+function readWeightInput({ final = false } = {}) {
+  const raw = els.weightInput.value.trim();
+  if (raw === "" || raw === "." || /^\d+\.$/.test(raw)) return { status: "pending" };
+  if (!/^\d+(\.\d+)?$/.test(raw)) return { status: "invalid" };
+  const value = Number(raw);
+  if (!Number.isFinite(value)) return { status: "invalid" };
+  if (!final && (value < minValue() || value > maxValue() || !isAlignedWeightValue(value))) {
+    return { status: "pending" };
+  }
+  return { status: "valid", value };
+}
+
+function restoreWeightInput() {
+  els.weightInput.value = formatWeightInput(jinToValue(state.weightJin));
+}
+
+function isAlignedWeightValue(value) {
+  const scaled = state.unit === "kg" ? value * 2 : value;
+  return Math.abs(scaled - Math.round(scaled)) < 0.0000001;
 }
 
 function getSelectedRegion() {

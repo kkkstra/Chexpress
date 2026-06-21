@@ -51,6 +51,13 @@ body {
   min-width: 0;
 }
 
+.title-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 0 0 auto;
+}
+
 .disclaimer {
   margin: 18px 0 0;
   color: var(--muted);
@@ -149,7 +156,8 @@ button {
 .icon-btn,
 .source-tab,
 .unit-toggle,
-.notice-confirm {
+.notice-confirm,
+.github-link {
   border: 1px solid #aebbb7;
   border-radius: 8px;
   background: var(--panel);
@@ -165,11 +173,26 @@ button {
   flex: 0 0 auto;
 }
 
+.github-link {
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  text-decoration: none;
+}
+
+.github-link svg {
+  width: 20px;
+  height: 20px;
+  fill: currentColor;
+}
+
 .source-btn:hover,
 .icon-btn:hover,
 .source-tab:hover,
 .unit-toggle:hover,
-.notice-confirm:hover {
+.notice-confirm:hover,
+.github-link:hover {
   border-color: var(--teal);
   color: var(--teal);
 }
@@ -568,6 +591,11 @@ button {
     min-height: 40px;
     min-width: 70px;
     padding: 0 14px;
+  }
+
+  .github-link {
+    width: 40px;
+    height: 40px;
   }
 
   .controls {
