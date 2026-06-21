@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>毕业快递价格对比</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <div class="title-row">
+          <div>
+            <p class="eyebrow">Graduation Express</p>
+            <h1>毕业快递价格对比</h1>
+          </div>
+          <button id="sourceBtn" class="source-btn" type="button">来源</button>
+        </div>
+        <div class="controls" aria-label="价格查询条件">
+          <label class="field combo-field region-field">
+            <span>地区</span>
+            <div class="control-row region-row">
+              <select id="provinceSelect"></select>
+              <select id="citySelect"></select>
+            </div>
+          </label>
+          <label class="field combo-field weight-field">
+            <span>重量</span>
+            <div class="weight-entry">
+              <input id="weightInput" type="number" min="0.5" max="80" step="0.5" value="20">
+              <button id="unitToggle" class="unit-toggle" type="button" aria-label="切换重量单位">千克</button>
+            </div>
+          </label>
+        </div>
+      </header>
+
+      <section class="compare-grid">
+        <div class="chart-wrap">
+          <div class="chart-head">
+            <div class="legend" id="legend"></div>
+          </div>
+          <svg id="priceChart" role="img" aria-label="三家快递不同重量总运费折线图"></svg>
+        </div>
+
+        <aside class="side-panel">
+          <div class="current-weight">
+            <span>当前重量</span>
+            <strong id="currentWeight">20 kg</strong>
+          </div>
+          <div id="priceCards" class="price-cards"></div>
+        </aside>
+      </section>
+      <p class="disclaimer">价格根据现场价目表图片整理，仅供参考；实际寄件价格、计费重量、优惠与服务规则请以下单页面或现场网点确认为准。</p>
+    </main>
+
+    <div id="sourceDialog" class="source-dialog" hidden>
+      <div class="source-backdrop" data-close-source></div>
+      <section class="source-sheet" role="dialog" aria-modal="true" aria-labelledby="sourceTitle">
+        <header class="source-header">
+          <div>
+            <p class="eyebrow">Source Tables</p>
+            <h2 id="sourceTitle">原始价格表</h2>
+          </div>
+          <button id="sourceClose" class="icon-btn" type="button" aria-label="关闭来源表">×</button>
+        </header>
+        <div id="sourceTabs" class="source-tabs" role="tablist" aria-label="快递公司"></div>
+        <div class="source-table-wrap">
+          <table id="sourceTable" class="source-table"></table>
+        </div>
+      </section>
+    </div>
+
+    <div id="disclaimerDialog" class="notice-dialog" hidden>
+      <div class="notice-backdrop"></div>
+      <section class="notice-card" role="dialog" aria-modal="true" aria-labelledby="noticeTitle">
+        <p class="eyebrow">Notice</p>
+        <h2 id="noticeTitle">价格提示</h2>
+        <p>价格根据现场价目表图片整理，仅供参考；实际寄件价格、计费重量、优惠与服务规则请以下单页面或现场网点确认为准。</p>
+        <button id="disclaimerConfirm" class="notice-confirm" type="button">我知道了</button>
+      </section>
+    </div>
+
+    <script src="data.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
