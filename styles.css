@@ -573,18 +573,28 @@ button {
   }
 
   .title-row {
-    align-items: flex-start;
-    gap: 12px;
+    display: block;
+    position: relative;
+    padding-top: 2px;
   }
 
   .eyebrow {
     margin-bottom: 6px;
+    padding-right: 124px;
     font-size: 11px;
   }
 
   h1 {
     font-size: clamp(28px, 8vw, 34px);
     line-height: 1.05;
+    white-space: nowrap;
+  }
+
+  .title-actions {
+    position: absolute;
+    top: 0;
+    right: 0;
+    gap: 8px;
   }
 
   .source-btn {
