@@ -3,6 +3,20 @@ const carrierOrder = ["sf", "jd", "deppon"];
 const carriers = carrierOrder
   .map((id) => data.carriers.find((carrier) => carrier.id === id))
   .filter(Boolean);
+const sourceEntries = carriers.flatMap((carrier) => {
+  if (!carrier.under20Rows) return [carrier];
+  return [
+    carrier,
+    {
+      id: `${carrier.id}-under20`,
+      name: `${carrier.name}（小于20kg）`,
+      color: carrier.color,
+      formula: "sf-under20",
+      source: carrier.under20Source,
+      rows: carrier.under20Rows,
+    },
+  ];
+});
 const range = data.range;
 
 const els = {
@@ -136,23 +150,36 @@ function render(options = {}) {
   const region = getSelectedRegion();
   const matches = carriers.map((carrier) => {
     const match = findBestRow(carrier, region);
+    const under20Match = carrier.under20Rows
+      ? findBestRow({ ...carrier, rows: carrier.under20Rows }, region)
+      : null;
     return {
       carrier,
       row: match?.row || null,
-      values: buildSeries(carrier, match?.row || null),
+      under20Row: under20Match?.row || null,
     };
+  });
+  matches.forEach((match) => {
+    match.values = buildSeries(match);
   });
 
   renderCards(matches);
   renderChart(matches);
 }
 
-function buildSeries(carrier, row) {
+function buildSeries(match) {
   const points = [];
   for (let jin = minJin(); jin <= maxJin(); jin += 1) {
-    points.push({ jin, value: jinToValue(jin), price: row ? calculatePrice(carrier, row, jin) : null });
+    points.push({ jin, value: jinToValue(jin), price: calculateMatchPrice(match, jin) });
   }
   return points;
+}
+
+function calculateMatchPrice(match, jin) {
+  if (match.carrier.id === "sf" && jin < 40) {
+    return match.under20Row ? calculateSfUnder20Price(match.under20Row, jin) : null;
+  }
+  return match.row ? calculatePrice(match.carrier, match.row, jin) : null;
 }
 
 function calculatePrice(carrier, row, jin) {
@@ -167,15 +194,28 @@ function calculatePrice(carrier, row, jin) {
   return row.firstPrice + (row.thresholdJin - row.firstJin) * row.rate1 + (jin - row.thresholdJin) * row.rate2;
 }
 
+function calculateSfUnder20Price(row, jin) {
+  const kg = jin / 2;
+  if (kg <= row.firstKg) return row.firstPrice;
+  if (kg <= 3) return row.firstPrice + (kg - row.firstKg) * row.rateTo3;
+
+  if (Number.isFinite(row.rate3To15)) {
+    if (kg <= 15) return row.firstPrice + 2 * row.rateTo3 + (kg - 3) * row.rate3To15;
+    return row.firstPrice + 2 * row.rateTo3 + 12 * row.rate3To15 + (kg - 15) * row.rateAfter15;
+  }
+
+  return row.firstPrice + 2 * row.rateTo3 + (kg - 3) * row.rate3To20;
+}
+
 function renderCards(matches) {
   els.priceCards.innerHTML = matches
-    .map(({ carrier, row }) => {
-      const price = row ? calculatePrice(carrier, row, state.weightJin) : null;
-      const classes = `price-card${row ? "" : " no-data"}`;
+    .map((match) => {
+      const price = calculateMatchPrice(match, state.weightJin);
+      const classes = `price-card${price == null ? " no-data" : ""}`;
       return `
-        <article class="${classes}" style="color:${carrier.color}">
+        <article class="${classes}" style="color:${match.carrier.color}">
           <header>
-            <h2>${carrier.name}</h2>
+            <h2>${match.carrier.name}</h2>
             <div class="price">${price == null ? "无数据" : `¥${formatMoney(price)}`}</div>
           </header>
         </article>
@@ -303,11 +343,11 @@ function confirmDisclaimer() {
 }
 
 function renderSourceTabs() {
-  els.sourceTabs.innerHTML = carriers
+  els.sourceTabs.innerHTML = sourceEntries
     .map(
-      (carrier) => `
-        <button class="source-tab" type="button" role="tab" data-carrier="${carrier.id}" aria-selected="${carrier.id === state.sourceCarrierId}">
-          ${carrier.name}
+      (entry) => `
+        <button class="source-tab" type="button" role="tab" data-carrier="${entry.id}" aria-selected="${entry.id === state.sourceCarrierId}">
+          ${entry.name}
         </button>
       `,
     )
@@ -322,9 +362,35 @@ function renderSourceTabs() {
 }
 
 function renderSourceTable() {
-  const carrier = carriers.find((item) => item.id === state.sourceCarrierId) || carriers[0];
+  const carrier = sourceEntries.find((item) => item.id === state.sourceCarrierId) || sourceEntries[0];
   const rows = carrier.rows;
   const rowSpanMap = buildRowSpanMap(rows, carrier);
+  if (carrier.formula === "sf-under20") {
+    els.sourceTable.innerHTML = `
+      <thead><tr><th>目的省</th><th>目的地</th><th>价格首重（1kg）</th><th>续重（≤3kg）</th><th>续重（3&lt;重量≤15kg）</th><th>续重（&gt;15kg）</th><th>续重（3&lt;重量≤20kg）</th><th>续重（&gt;20kg）</th></tr></thead>
+      <tbody>
+        ${rows
+          .map((row, index) => {
+            const group = rowSpanMap.get(index);
+            return `
+              <tr>
+                ${group ? `<td rowspan="${group.span}" class="province-cell">${escapeHtml(group.label)}</td>` : ""}
+                <td>${escapeHtml(row.label)}</td>
+                <td>${formatSourceCell(row.firstPrice)}</td>
+                <td>${formatSourceCell(row.rateTo3)}</td>
+                <td>${formatSourceCell(row.rate3To15)}</td>
+                <td>${formatSourceCell(row.rateAfter15)}</td>
+                <td>${formatSourceCell(row.rate3To20)}</td>
+                <td>${formatSourceCell(row.rateAfter20)}</td>
+              </tr>
+            `;
+          })
+          .join("")}
+      </tbody>
+    `;
+    return;
+  }
+
   if (carrier.formula === "deppon-20-60") {
     els.sourceTable.innerHTML = `
       <thead><tr><th>目的地</th><th>首重20斤</th><th>续重1（20-60斤）</th><th>60斤价格</th><th>续重2（60斤以上）</th></tr></thead>
@@ -368,6 +434,10 @@ function renderSourceTable() {
         .join("")}
     </tbody>
   `;
+}
+
+function formatSourceCell(value) {
+  return Number.isFinite(value) ? value : "—";
 }
 
 function firstToThresholdHeader(rows) {
@@ -424,7 +494,10 @@ function scoreRow(row, region) {
 
   aliases.forEach((alias) => {
     regionTerms.forEach((term) => {
-      if (isTermMatch(alias, term)) score += 10;
+      if (isTermMatch(alias, term)) {
+        score += 10;
+        if (row.scope === "specific") score += 5;
+      }
     });
   });
 
