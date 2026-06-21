@@ -60,7 +60,7 @@ function init() {
     render();
   });
   els.weightInput.addEventListener("change", () => {
-    const next = readWeightInput({ final: true });
+    const next = readWeightInput();
     if (next.status !== "valid") {
       restoreWeightInput();
       return;
@@ -200,7 +200,8 @@ function renderChart(matches) {
   const allPrices = matches.flatMap((match) => match.values.map((point) => point.price).filter(Number.isFinite));
   const yMaxRaw = Math.max(10, ...allPrices);
   const yMax = Math.ceil((yMaxRaw * 1.08) / 20) * 20;
-  const selectedX = xScale(jinToValue(state.weightJin), margin.left, plotW);
+  const selectedInChartRange = isJinInChartRange(state.weightJin);
+  const selectedX = selectedInChartRange ? xScale(jinToValue(state.weightJin), margin.left, plotW) : null;
 
   const grid = [];
   const yTicks = 5;
@@ -227,6 +228,7 @@ function renderChart(matches) {
 
   const dots = matches
     .map(({ carrier, values }) => {
+      if (!selectedInChartRange) return "";
       const point = values.find((item) => item.jin === state.weightJin);
       if (!point || !Number.isFinite(point.price)) return "";
       const x = xScale(point.value, margin.left, plotW);
@@ -244,7 +246,7 @@ function renderChart(matches) {
     <text class="axis-label" x="${width - margin.right}" y="${axisTitleY}" text-anchor="end">重量 ${unitLabel()}</text>
     <text class="axis-label" x="${margin.left}" y="${axisTitleY}">总运费 ¥</text>
     ${paths}
-    <line class="focus-line" x1="${selectedX}" x2="${selectedX}" y1="${margin.top}" y2="${height - margin.bottom}"></line>
+    ${selectedInChartRange ? `<line class="focus-line" x1="${selectedX}" x2="${selectedX}" y1="${margin.top}" y2="${height - margin.bottom}"></line>` : ""}
     ${dots}
     <rect class="hit-area" x="${margin.left}" y="${margin.top}" width="${plotW}" height="${plotH}"></rect>
   `;
@@ -444,7 +446,8 @@ function scoreRow(row, region) {
 function jinFromPointer(event, svg, left, plotW) {
   const rect = svg.getBoundingClientRect();
   const ratio = (event.clientX - rect.left - left * (rect.width / Number(svg.viewBox.baseVal.width))) / (plotW * (rect.width / Number(svg.viewBox.baseVal.width)));
-  const value = minValue() + ratio * (maxValue() - minValue());
+  const boundedRatio = Math.max(0, Math.min(1, ratio));
+  const value = minValue() + boundedRatio * (maxValue() - minValue());
   return valueToJin(value);
 }
 
@@ -458,29 +461,20 @@ function yScale(value, yMax, top, plotH) {
 
 function configureWeightInput() {
   els.weightInput.min = String(minValue());
-  els.weightInput.max = String(maxValue());
   els.weightInput.step = state.unit === "kg" ? "0.5" : "1";
 }
 
-function readWeightInput({ final = false } = {}) {
+function readWeightInput() {
   const raw = els.weightInput.value.trim();
-  if (raw === "" || raw === "." || /^\d+\.$/.test(raw)) return { status: "pending" };
-  if (!/^\d+(\.\d+)?$/.test(raw)) return { status: "invalid" };
-  const value = Number(raw);
+  const normalized = raw === "" || raw === "." ? "0" : raw;
+  if (!/^\d+(\.\d*)?$/.test(normalized)) return { status: "invalid" };
+  const value = Number(normalized);
   if (!Number.isFinite(value)) return { status: "invalid" };
-  if (!final && (value < minValue() || value > maxValue() || !isAlignedWeightValue(value))) {
-    return { status: "pending" };
-  }
   return { status: "valid", value };
 }
 
 function restoreWeightInput() {
   els.weightInput.value = formatWeightInput(jinToValue(state.weightJin));
-}
-
-function isAlignedWeightValue(value) {
-  const scaled = state.unit === "kg" ? value * 2 : value;
-  return Math.abs(scaled - Math.round(scaled)) < 0.0000001;
 }
 
 function getSelectedRegion() {
@@ -529,7 +523,11 @@ function jinToValue(jin) {
 
 function clampJin(value) {
   if (!Number.isFinite(value)) return minJin();
-  return Math.max(minJin(), Math.min(maxJin(), Math.round(value)));
+  return Math.max(minJin(), Math.ceil(value - 0.0000001));
+}
+
+function isJinInChartRange(jin) {
+  return jin >= minJin() && jin <= maxJin();
 }
 
 function formatWeight(jin) {
